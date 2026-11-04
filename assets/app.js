@@ -5,6 +5,7 @@
   const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
   const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
   const fmt = n => n.toLocaleString();
+  const nat = new Intl.Collator(undefined, { numeric: true, sensitivity: 'base' }).compare;   // Vol 2 before Vol 10 before Vol 100
 
   const data = window.CATALOG;
   if (!data || !Array.isArray(data.albums)) {
@@ -43,7 +44,7 @@
   const phStyle = al => { const h = hue(al.id); return `--phbg:linear-gradient(140deg,hsl(${h} 55% 34%),hsl(${(h + 50) % 360} 60% 16%))`; };
   // placeholder always sits underneath; the cover image (if any) fades in over it and removes itself if missing
   const coverHTML = (al, alt = true) => `<div class="ph" style="${phStyle(al)}"><span>${esc(al.t)}</span></div>` +
-    (al.c ? `<img class="cov" src="covers/${al.id}.jpg" alt="${alt ? esc(al.t) + ' cover' : ''}" loading="lazy" decoding="async" onload="this.classList.add('ok')" onerror="this.remove()">` : '');
+    (al.c ? `<img class="cov" src="covers/${al.id}.jpg?v=${al.c}" alt="${alt ? esc(al.t) + ' cover' : ''}" loading="lazy" decoding="async" onload="this.classList.add('ok')" onerror="this.remove()">` : '');
 
   /* ---------- stats + hero wall ---------- */
   function countUp(el, to) {
@@ -63,7 +64,7 @@
     const rows = 4, per = 16;
     let html = '';
     for (let r = 0; r < rows; r++) {
-      const items = pick(per).map(al => al.c ? `<img src="covers/${al.id}.jpg" alt="" loading="lazy" decoding="async">` : `<div class="ph" style="${phStyle(al)}"></div>`).join('');
+      const items = pick(per).map(al => al.c ? `<img src="covers/${al.id}.jpg?v=${al.c}" alt="" loading="lazy" decoding="async">` : `<div class="ph" style="${phStyle(al)}"></div>`).join('');
       html += `<div class="wall-row" style="--dur:${70 + r * 18}s">${items}${items}</div>`;
     }
     $('#wall').innerHTML = html;
@@ -75,7 +76,7 @@
   const CHUNK = 96;
   const cardHTML = (al, idx) => `
     <article class="card" tabindex="0" data-id="${al.id}" data-idx="${idx}" data-letter="${al.letter}">
-      <div class="sleeve">${coverHTML(al)}<div class="glare"></div>${al.s !== 'artists' ? `<span class="badge">${SEC[al.s] === 'Rolling Stone 500' ? 'RS 500' : SEC[al.s]}</span>` : ''}</div>
+      <div class="sleeve">${coverHTML(al)}<div class="glare"></div>${al.s !== 'artists' && !(al.s === 'compilations' && al.c) ? `<span class="badge">${SEC[al.s] === 'Rolling Stone 500' ? 'RS 500' : SEC[al.s]}</span>` : ''}</div>
       <div class="meta"><div class="t">${esc(al.t)}</div><div class="a">${esc(al.a)}</div>${al.y ? `<div class="y">${al.y}</div>` : ''}</div>
     </article>`;
 
@@ -86,8 +87,8 @@
   function applyBrowse() {
     let list = state.sec === 'all' ? albums.slice() : albums.filter(a => a.s === state.sec);
     const cmp = (x, y) => x < y ? -1 : x > y ? 1 : 0;
-    if (state.sort === 'artist') list.sort((a, b) => cmp(a.sortA, b.sortA) || cmp(a.y, b.y) || cmp(fold(a.t), fold(b.t)));
-    else if (state.sort === 'title') list.sort((a, b) => cmp(fold(a.t), fold(b.t)));
+    if (state.sort === 'artist') list.sort((a, b) => cmp(a.sortA, b.sortA) || cmp(a.y, b.y) || nat(a.t, b.t));
+    else if (state.sort === 'title') list.sort((a, b) => nat(a.t, b.t));
     else if (state.sort === 'new') list.sort((a, b) => cmp(b.y || '0', a.y || '0') || cmp(a.sortA, b.sortA));
     else if (state.sort === 'old') list.sort((a, b) => cmp(a.y || '9999', b.y || '9999') || cmp(a.sortA, b.sortA));
     else for (let i = list.length - 1; i > 0; i--) { const j = (Math.random() * (i + 1)) | 0; [list[i], list[j]] = [list[j], list[i]]; }
@@ -174,7 +175,7 @@
     const match = k => toks.every(t => k.includes(t));
     const inSec = al => state.sec === 'all' || al.s === state.sec;
     const arts = artists.filter(a => match(fold(a.name)) && a.albums.some(inSec)).sort((a, b) => b.albums.length - a.albums.length);
-    const als = albums.filter(a => inSec(a) && match(a.key));
+    const als = albums.filter(a => inSec(a) && match(a.key)).sort((a, b) => nat(a.sortA, b.sortA) || nat(a.t, b.t));
     const sn = []; let songTotal = 0;
     for (const t of tracks) { if (inSec(t.al) && match(t.key)) { songTotal++; if (sn.length < 200) sn.push(t); } }
     const ms = (performance.now() - t0).toFixed(1);
@@ -183,7 +184,7 @@
     let html = `<p class="mono" style="color:var(--dim);margin:0;font-size:12px">${fmt(arts.length + als.length + songTotal)} matches in ${ms} ms</p>`;
     if (arts.length) html += `<div class="res-block"><h3>Artists <span>${arts.length}</span></h3><div class="artist-pills">${arts.slice(0, 16).map(a => {
       const c = a.albums.find(x => x.c) || a.albums[0];
-      return `<button class="artist-pill" data-artist="${esc(a.name)}">${c.c ? `<img src="covers/${c.id}.jpg" alt="" loading="lazy">` : `<span class="ph" style="${phStyle(c)}"></span>`}${hl(a.name, rawToks)} <small>${a.albums.length}</small></button>`;
+      return `<button class="artist-pill" data-artist="${esc(a.name)}">${c.c ? `<img src="covers/${c.id}.jpg?v=${c.c}" alt="" loading="lazy">` : `<span class="ph" style="${phStyle(c)}"></span>`}${hl(a.name, rawToks)} <small>${a.albums.length}</small></button>`;
     }).join('')}</div></div>`;
     if (als.length) html += `<div class="res-block"><h3>Albums <span>${als.length}</span></h3><div class="grid">${als.slice(0, 24).map((al, i) => cardHTML(al, 'r' + i)).join('')}</div>${als.length > 24 ? `<p class="more-note">Showing 24 of ${fmt(als.length)}. Add another word to narrow it down.</p>` : ''}</div>`;
     if (sn.length) html += `<div class="res-block"><h3>Songs <span>${fmt(songTotal)}</span></h3><div class="songs">${sn.map((t, i) => `
@@ -277,10 +278,10 @@
     });
     const share = '\\\\Synology01\\music\\' + al.p;
     panel.innerHTML = `
-      ${al.c ? `<div class="sheet-backdrop" style="background-image:url('covers/${al.id}.jpg')"></div>` : ''}
+      ${al.c ? `<div class="sheet-backdrop" style="background-image:url('covers/${al.id}.jpg?v=${al.c}')"></div>` : ''}
       <button class="x" id="closeSheet" aria-label="Close">×</button>
       <div class="sheet-head">
-        <div class="disc-wrap"><div class="vinyl"></div><div class="big">${al.c ? `<img src="covers/${al.id}.jpg" alt="${esc(al.t)} cover" id="bigImg">` : `<div class="ph" style="${phStyle(al)}"><span>${esc(al.t)}</span></div>`}</div></div>
+        <div class="disc-wrap"><div class="vinyl"></div><div class="big">${al.c ? `<img src="covers/${al.id}.jpg?v=${al.c}" alt="${esc(al.t)} cover" id="bigImg">` : `<div class="ph" style="${phStyle(al)}"><span>${esc(al.t)}</span></div>`}</div></div>
         <div class="sheet-info">
           <div class="kind">${al.s === 'artists' ? 'Album' : SEC[al.s]}</div>
           <h2 id="sheetTitle">${esc(al.t)}</h2>
