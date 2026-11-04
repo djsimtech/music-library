@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Danny's Music Library</title>
+<meta name="description" content="Searchable catalog of Danny's MP3 collection with album art.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Unbounded:wght@500;700;800&family=Manrope:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="assets/style.css">
+</head>
+<body>
+<div class="ambient" aria-hidden="true"></div>
+
+<header class="hero" id="top">
+  <div class="wall" id="wall" aria-hidden="true"></div>
+  <div class="hero-inner">
+    <p class="eyebrow">\\Synology01\music</p>
+    <h1>Danny's <span>Music Library</span></h1>
+    <p class="stats" id="stats">Loading catalog…</p>
+    <div class="search-wrap">
+      <svg class="search-ico" viewBox="0 0 24 24" aria-hidden="true"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" autocomplete="off" spellcheck="false" placeholder="Search songs, artists, albums…" aria-label="Search songs, artists and albums">
+      <kbd>/</kbd>
+    </div>
+  </div>
+</header>
+
+<nav class="toolbar" id="toolbar" aria-label="Browse options">
+  <div class="toolbar-inner">
+    <div class="chips" role="group" aria-label="Section">
+      <button class="chip" data-sec="all" aria-pressed="true">All</button>
+      <button class="chip" data-sec="artists" aria-pressed="false">Artists</button>
+      <button class="chip" data-sec="top500" aria-pressed="false">Rolling Stone 500</button>
+      <button class="chip" data-sec="compilations" aria-pressed="false">Compilations</button>
+      <button class="chip" data-sec="soundtracks" aria-pressed="false">Soundtracks</button>
+    </div>
+    <div class="tools">
+      <label class="sel"><span class="sr">Sort</span>
+        <select id="sort" aria-label="Sort albums">
+          <option value="artist">Artist A–Z</option>
+          <option value="new">Newest first</option>
+          <option value="old">Oldest first</option>
+          <option value="title">Album title</option>
+          <option value="random">Shuffle order</option>
+        </select>
+      </label>
+      <button class="btn-dice" id="dice" title="Open a random album">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="3" y="3" width="18" height="18" rx="4"/><circle cx="8" cy="8" r="1.3"/><circle cx="16" cy="16" r="1.3"/><circle cx="16" cy="8" r="1.3"/><circle cx="8" cy="16" r="1.3"/><circle cx="12" cy="12" r="1.3"/></svg>
+        Surprise me
+      </button>
+    </div>
+  </div>
+</nav>
+
+<main id="main">
+  <section id="results" class="results" hidden aria-live="polite"></section>
+  <section id="browse">
+    <div class="grid-head"><h2 id="gridTitle">All albums</h2><span id="gridCount" class="mono"></span></div>
+    <div id="grid" class="grid"></div>
+    <div id="sentinel" class="sentinel" aria-hidden="true"></div>
+  </section>
+</main>
+
+<nav class="rail" id="rail" aria-label="Jump to letter"></nav>
+
+<div class="sheet" id="sheet" hidden role="dialog" aria-modal="true" aria-labelledby="sheetTitle">
+  <div class="sheet-bg" id="sheetBg"></div>
+  <div class="sheet-panel" id="sheetPanel"></div>
+</div>
+
+<footer class="foot">
+  <span id="gen"></span>
+  <span>Built from the folders on <span class="mono">\\Synology01\music</span> · covers via Folder.jpg &amp; the Cover Art Archive</span>
+</footer>
+
+<noscript><p style="padding:2rem;color:#fff">This catalog needs JavaScript turned on.</p></noscript>
+<script src="catalog.js"></script>
+<script src="assets/app.js"></script>
+</body>
+</html>
